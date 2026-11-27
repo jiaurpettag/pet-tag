@@ -42,3 +42,16 @@
 ## লিংকগুলো
 - খুঁজে পাওয়া ব্যক্তির পেজ: `https://jiaurpettag.github.io/pet-tag/?t=PT-XXXXXX` (QR এ এটাই থাকে)
 - মালিকের প্যানেল: `https://jiaurpettag.github.io/pet-tag/?owner`
+
+## ধাপ ৭: মালিককে ইমেইল নোটিফিকেশন (Google Apps Script, ফ্রি)
+কেউ মেসেজ পাঠালে মালিকের Gmail এ ইমেইল যাবে। মালিকের ইমেইল কোনো পাবলিক পেজে থাকে না। Gmail প্রতিদিন প্রায় ১০০টা ইমেইল ফ্রি পাঠাতে দেয়।
+**যে Google অ্যাকাউন্ট দিয়ে Firebase প্রজেক্ট খুলেছেন, সেই অ্যাকাউন্ট দিয়েই নিচের কাজগুলো করুন।**
+
+1. https://script.google.com এ যান। **New project** চাপুন।
+2. উপরে বাম দিকে "Untitled project" লেখায় চাপুন, নাম দিন `PetTag Alerts`।
+3. বাম পাশে ⚙️ **Project Settings** চাপুন। **Show "appsscript.json" manifest file in editor** এর বক্সে টিক দিন।
+4. বাম পাশে **< > Editor** চাপুন। `appsscript.json` ফাইলে চাপুন, ভেতরের সব লেখা মুছে [apps-script/appsscript.json](apps-script/appsscript.json) এর লেখা পেস্ট করুন।
+5. `Code.gs` ফাইলে চাপুন, ভেতরের সব লেখা মুছে [apps-script/Code.gs](apps-script/Code.gs) এর লেখা পেস্ট করুন। উপরে 💾 **Save** চাপুন।
+6. উপরের ফাংশনের ড্রপডাউন থেকে `testSetup` বেছে **▶ Run** চাপুন। **Review permissions** → আপনার অ্যাকাউন্ট → **Advanced** → **Go to PetTag Alerts (unsafe)** → **Allow** চাপুন। (এটা আপনার নিজের স্ক্রিপ্ট, তাই নিরাপদ।) আপনার Gmail এ একটা টেস্ট ইমেইল আসবে।
+7. উপরে ডানে **Deploy** → **New deployment** চাপুন। ⚙️ আইকন থেকে **Web app** বেছে নিন। **Execute as: Me**, **Who has access: Anyone** রাখুন। **Deploy** চাপুন।
+8. যে **Web app URL** দেখাবে (`https://script.google.com/macros/s/.../exec`) সেটা কপি করে Claude কে পাঠান। Claude সেটা `firebase-config.js` এ বসিয়ে দেবে।

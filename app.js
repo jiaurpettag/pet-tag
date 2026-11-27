@@ -3,7 +3,10 @@ import { getAuth, connectAuthEmulator, GoogleAuthProvider, onAuthStateChanged, s
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, query, where,
   onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, SITE_URL } from "./firebase-config.js";
+import * as cfg from "./firebase-config.js";
+// Read optional settings defensively so a browser-cached older config file can't break the page.
+const { firebaseConfig, SITE_URL } = cfg;
+const NOTIFY_URL = cfg.NOTIFY_URL || "";
 
 // Tag ID scheme: "PT-" + 6 chars from a 31-letter alphabet without 0/O/1/I/L (31^6 ≈ 887 million IDs).
 // The same ID will later go into an offline SMSTO QR ("PT-XXXXXX found") sent to a company number.
@@ -153,17 +156,27 @@ function messageForm(id, pet) {
     if (!v("fMsg")) { out.className = "err"; out.textContent = "মেসেজ লিখুন।"; return; }
     const b = f.querySelector("#fSend"); b.disabled = true; out.className = "muted"; out.textContent = "পাঠানো হচ্ছে…";
     try {
-      await addDoc(collection(db, "messages"), {
+      const ref = await addDoc(collection(db, "messages"), {
         tagId: id, ownerUid: pet.ownerUid, petName: pet.name || "",
         finderName: v("fName"), finderPhone: v("fPhone"), location: v("fLoc"), mapUrl,
         message: v("fMsg"), read: false, createdAt: serverTimestamp(),
       });
+      notifyOwner(ref.id);
       f.replaceChildren(el("h2", {}, "ধন্যবাদ!"), el("p", { class: "ok" }, "মেসেজ মালিকের কাছে পৌঁছেছে। সম্ভব হলে প্রাণীটিকে নিরাপদ জায়গায় রাখুন।"));
     } catch {
       b.disabled = false; out.className = "err"; out.textContent = "মেসেজ পাঠানো যায়নি। ইন্টারনেট চেক করে আবার চেষ্টা করুন।";
     }
   });
   return f;
+}
+
+// Ask the email-alert script (Google Apps Script, see apps-script/) to email the owner about this message.
+// Only the message ID is sent; the script looks up the message and the owner's private email itself.
+function notifyOwner(id) {
+  if (!NOTIFY_URL) return;
+  try {
+    fetch(NOTIFY_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ id }), keepalive: true }).catch(() => {});
+  } catch {}
 }
 
 // ---------- owner side ----------
@@ -187,11 +200,13 @@ function ownerView() {
   const editBox = el("div");
   const inboxBox = card(el("h2", {}, "ইনবক্স"), el("p", { class: "muted" }, "লোড হচ্ছে…"));
   const petsBox = card(el("h2", {}, "আমার পোষা প্রাণী"), el("p", { class: "muted" }, "লোড হচ্ছে…"));
+  const alertBox = el("div");
+  setupEmailAlerts(alertBox);
   show(
     el("div", { class: "row", style: "justify-content:space-between" },
       el("button", { onclick: () => openEditor(editBox, null, {}) }, "+ ট্যাগ চালু করুন"),
       el("button", { class: "ghost small", onclick: () => signOut(auth) }, "লগআউট")),
-    editBox, inboxBox, petsBox);
+    editBox, alertBox, inboxBox, petsBox);
 
   unsub.push(onSnapshot(query(collection(db, "pets"), where("ownerUid", "==", uid)), s => {
     const list = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
@@ -229,6 +244,32 @@ function ownerView() {
             el("button", { class: "small ghost", onclick: e => { e.target.disabled = true; deleteDoc(doc(db, "messages", m.id)).catch(() => { e.target.disabled = false; }); } }, "মুছুন")));
       }));
   }, () => fill(inboxBox, el("p", { class: "err" }, "ইনবক্স লোড হয়নি।"))));
+}
+
+// The owner's email lives only in their private owners/{uid} doc (rules: only they can read it, and it must be
+// their own login email). The alert script reads it server-side; it never appears on a public page.
+async function setupEmailAlerts(box) {
+  const u = currentUser, ref = doc(db, "owners", u.uid);
+  let notify = true;
+  try {
+    const o = await getDoc(ref);
+    const d = o.exists() ? o.data() : {};
+    notify = d.notify !== false;
+    if (u.email && (d.email !== u.email || d.notify === undefined)) await setDoc(ref, { email: u.email, notify }, { merge: true });
+  } catch {}
+  if (!u.email) return;
+  const status = el("span", { class: "muted", role: "status" });
+  const cb = el("input", { type: "checkbox", id: "notifyEmail", checked: notify });
+  cb.addEventListener("change", async () => {
+    cb.disabled = true;
+    try { await setDoc(ref, { email: u.email, notify: cb.checked }, { merge: true }); status.className = "ok"; status.textContent = "সেভ হয়েছে"; }
+    catch { cb.checked = !cb.checked; status.className = "err"; status.textContent = "সেভ হয়নি"; }
+    cb.disabled = false;
+  });
+  fill(box, card(
+    el("label", { class: "switch" }, cb, "নতুন মেসেজ এলে ইমেইল পাঠাও"),
+    el("p", { class: "muted", style: "overflow-wrap:anywhere" }, "ইমেইল যাবে: " + u.email + " (এটা কোনো পাবলিক পেজে দেখানো হয় না)"),
+    status));
 }
 
 async function openEditor(box, id, p) {
@@ -279,7 +320,7 @@ async function openEditor(box, id, p) {
     };
     out.className = "muted"; out.textContent = "সেভ হচ্ছে…";
     try {
-      if (st.ownerPhoto !== ownerPhoto) await setDoc(doc(db, "owners", currentUser.uid), { photo: st.ownerPhoto || "" });
+      if (st.ownerPhoto !== ownerPhoto) await setDoc(doc(db, "owners", currentUser.uid), { photo: st.ownerPhoto || "" }, { merge: true });
       await setDoc(doc(db, "pets", tag), data);
       box.replaceChildren(card(el("p", { class: "ok" }, data.name + " সেভ হয়েছে। ট্যাগ আইডি: " + tag)));
     } catch (err) {
