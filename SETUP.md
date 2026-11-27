@@ -23,7 +23,7 @@
 
 ## ধাপ ৪: ডাটাবেস (Firestore) চালু করা
 1. বাম মেনুতে **Build → Firestore Database** এ যান। **Create database** চাপুন।
-2. Location: **asia-south1 (Mumbai)** বেছে নিন (বাংলাদেশের সবচেয়ে কাছে)। **Next** চাপুন।
+2. Location: **asia-southeast1 (Singapore)** বেছে নিন (বাংলাদেশ থেকে ভালো কানেকশন)। **Next** চাপুন।
 3. **Start in production mode** বেছে নিন। **Create** চাপুন।
 4. উপরের **Rules** ট্যাবে যান। সেখানে যা লেখা আছে সব মুছে ফেলুন।
 5. এই রিপোর [`firestore.rules`](firestore.rules) ফাইলের পুরো লেখা কপি করে সেখানে পেস্ট করুন। **Publish** চাপুন।
