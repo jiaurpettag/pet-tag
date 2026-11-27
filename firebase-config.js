@@ -11,3 +11,6 @@ export const firebaseConfig = {
 
 // The public address of this site. QR codes point to SITE_URL + "?t=PT-XXXXXX".
 export const SITE_URL = "https://jiaurpettag.github.io/pet-tag/";
+
+// Email alerts: the Web app URL of the deployed Google Apps Script (apps-script/Code.gs). Empty = no emails.
+export const NOTIFY_URL = "";

@@ -31,11 +31,15 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
     }
 
-    // Private per-owner data (the owner's own photo, kept off the public page unless they turn it on).
+    // Private per-owner data: the owner's own photo (public only when they turn it on) and their login email
+    // for message alerts. The email must be the signed-in account's own address and is never on a public doc.
     match /owners/{uid} {
       allow read, delete: if signedIn() && request.auth.uid == uid;
       allow create, update: if signedIn() && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['photo']) && photo(request.resource.data.photo);
+        && request.resource.data.keys().hasOnly(['photo', 'email', 'notify'])
+        && (!('photo' in request.resource.data) || photo(request.resource.data.photo))
+        && (!('email' in request.resource.data) || request.resource.data.email == request.auth.token.email)
+        && (!('notify' in request.resource.data) || request.resource.data.notify is bool);
     }
 
     match /messages/{msgId} {
