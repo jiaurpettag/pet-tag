@@ -44,7 +44,9 @@ function el(tag, attrs = {}, ...kids) {
   return e;
 }
 const card = (...kids) => el("div", { class: "card" }, ...kids);
-const show = (...nodes) => app.replaceChildren(...nodes);
+// replaceChildren() would print a null child as the text "null", so drop empty slots first.
+const fill = (node, ...kids) => node.replaceChildren(...kids.flat().filter(k => k != null && k !== false));
+const show = (...nodes) => fill(app, ...nodes);
 const safeImg = s => (typeof s === "string" && s.startsWith("data:image/jpeg;base64,") ? s : null);
 const safeMap = s => (typeof s === "string" && /^https:\/\/maps\.google\.com\/\?q=-?[0-9.]+,-?[0-9.]+$/.test(s) ? s : null);
 function newId() { const a = new Uint32Array(6); crypto.getRandomValues(a); return "PT-" + [...a].map(n => ALPHA[n % ALPHA.length]).join(""); }
@@ -193,7 +195,7 @@ function ownerView() {
 
   unsub.push(onSnapshot(query(collection(db, "pets"), where("ownerUid", "==", uid)), s => {
     const list = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    petsBox.replaceChildren(el("h2", {}, "আমার পোষা প্রাণী (" + list.length.toLocaleString("bn-BD") + ")"),
+    fill(petsBox, el("h2", {}, "আমার পোষা প্রাণী (" + list.length.toLocaleString("bn-BD") + ")"),
       list.length ? null : el("p", { class: "muted" }, "এখনো কোনো ট্যাগ চালু করা হয়নি। উপরের বাটন চাপুন।"),
       ...list.map(p => {
         const im = safeImg(p.petPhoto);
@@ -204,14 +206,14 @@ function ownerView() {
               el("button", { class: "small ghost", onclick: () => showQr(editBox, p) }, "QR কোড"),
               el("a", { class: "small", href: "?t=" + p.id }, "পেজ দেখুন"))));
       }));
-  }, () => petsBox.replaceChildren(el("p", { class: "err" }, "তালিকা লোড হয়নি।"))));
+  }, () => fill(petsBox, el("p", { class: "err" }, "তালিকা লোড হয়নি।"))));
 
   unsub.push(onSnapshot(query(collection(db, "messages"), where("ownerUid", "==", uid)), s => {
     const msgs = s.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
     const unread = msgs.filter(m => !m.read).length;
     document.title = (unread ? `(${unread}) ` : "") + "পেটট্যাগ · মালিক";
-    inboxBox.replaceChildren(el("h2", {}, "ইনবক্স" + (unread ? " · " + unread.toLocaleString("bn-BD") + "টি নতুন" : "")),
+    fill(inboxBox, el("h2", {}, "ইনবক্স" + (unread ? " · " + unread.toLocaleString("bn-BD") + "টি নতুন" : "")),
       msgs.length ? null : el("p", { class: "muted" }, "কেউ ট্যাগ স্ক্যান করে মেসেজ দিলে এখানে দেখাবে।"),
       ...msgs.map(m => {
         const map = safeMap(m.mapUrl);
@@ -226,7 +228,7 @@ function ownerView() {
             m.read ? null : el("button", { class: "small ghost", onclick: e => { e.target.disabled = true; updateDoc(doc(db, "messages", m.id), { read: true }).catch(() => { e.target.disabled = false; }); } }, "পড়েছি"),
             el("button", { class: "small ghost", onclick: e => { e.target.disabled = true; deleteDoc(doc(db, "messages", m.id)).catch(() => { e.target.disabled = false; }); } }, "মুছুন")));
       }));
-  }, () => inboxBox.replaceChildren(el("p", { class: "err" }, "ইনবক্স লোড হয়নি।"))));
+  }, () => fill(inboxBox, el("p", { class: "err" }, "ইনবক্স লোড হয়নি।"))));
 }
 
 async function openEditor(box, id, p) {
