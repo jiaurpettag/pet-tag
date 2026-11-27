@@ -13,4 +13,4 @@ export const firebaseConfig = {
 export const SITE_URL = "https://jiaurpettag.github.io/pet-tag/";
 
 // Email alerts: the Web app URL of the deployed Google Apps Script (apps-script/Code.gs). Empty = no emails.
-export const NOTIFY_URL = "";
+export const NOTIFY_URL = "https://script.google.com/macros/s/AKfycbzDvTQMHIbhBFOL242jeQmMxM5l7VKN3biM1XD2hOmgdtj6xozRiH6AWpsqYh2efg-V/exec";
