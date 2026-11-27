@@ -1,0 +1,60 @@
+rules_version = '2';
+
+// Pet tag security rules.
+// - Anyone can read a pet profile (that is what a finder sees after scanning the QR).
+// - Only the signed-in owner can create or change their own pet. The first owner to save a tag ID claims it.
+// - Anyone, without login, can send a message to a pet's owner. Only that owner can read, mark or delete it.
+// - The owner's phone number is never stored anywhere.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function validTag(id) { return id is string && id.matches('^PT-[2-9A-HJKMNP-Z]{6}$'); }
+    function str(v, max) { return v is string && v.size() <= max; }
+    function photo(v) { return v == '' || (str(v, 300000) && v.matches('^data:image/jpeg;base64,.*')); }
+
+    function validPet(d) {
+      return d.keys().hasOnly(['ownerUid', 'name', 'species', 'note', 'showOwner', 'petPhoto', 'ownerPhoto', 'updatedAt'])
+        && d.ownerUid == request.auth.uid
+        && str(d.name, 40) && d.name.size() > 0
+        && str(d.species, 60) && str(d.note, 300)
+        && d.showOwner is bool
+        && photo(d.petPhoto) && photo(d.ownerPhoto)
+        && (d.showOwner || d.ownerPhoto == '')
+        && d.updatedAt is int;
+    }
+
+    match /pets/{tagId} {
+      allow read: if true;
+      allow create: if signedIn() && validTag(tagId) && validPet(request.resource.data);
+      allow update: if signedIn() && resource.data.ownerUid == request.auth.uid && validPet(request.resource.data);
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Private per-owner data (the owner's own photo, kept off the public page unless they turn it on).
+    match /owners/{uid} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['photo']) && photo(request.resource.data.photo);
+    }
+
+    match /messages/{msgId} {
+      allow create: if validTag(request.resource.data.tagId)
+        && exists(/databases/$(database)/documents/pets/$(request.resource.data.tagId))
+        && request.resource.data.ownerUid == get(/databases/$(database)/documents/pets/$(request.resource.data.tagId)).data.ownerUid
+        && request.resource.data.keys().hasOnly(['tagId', 'ownerUid', 'petName', 'finderName', 'finderPhone', 'location', 'mapUrl', 'message', 'read', 'createdAt'])
+        && str(request.resource.data.petName, 40)
+        && str(request.resource.data.finderName, 60)
+        && str(request.resource.data.finderPhone, 20)
+        && str(request.resource.data.location, 300)
+        && (request.resource.data.mapUrl == '' || request.resource.data.mapUrl.matches('^https://maps[.]google[.]com/[?]q=-?[0-9.]+,-?[0-9.]+$'))
+        && str(request.resource.data.message, 1000) && request.resource.data.message.size() > 0
+        && request.resource.data.read == false
+        && request.resource.data.createdAt == request.time;
+      allow read, delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow update: if signedIn() && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+        && request.resource.data.read is bool;
+    }
+  }
+}
