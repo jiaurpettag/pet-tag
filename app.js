@@ -293,17 +293,32 @@ async function openEditor(box, id, p) {
   box.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+// Draw the QR ourselves: whole-pixel modules (no blur), black on white, and a 4-module white quiet zone
+// baked into the image, so phone camera apps (not only Google Lens) detect it, on screen or printed.
+function qrImage(text, px = 12) {
+  const tmp = document.createElement("div");
+  const qr = new QRCode(tmp, { text, width: 64, height: 64, correctLevel: QRCode.CorrectLevel.M });
+  const m = qr._oQRCode, n = m.getModuleCount(), quiet = 4, size = (n + quiet * 2) * px;
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d");
+  g.fillStyle = "#ffffff"; g.fillRect(0, 0, size, size);
+  g.fillStyle = "#000000";
+  for (let r = 0; r < n; r++) for (let col = 0; col < n; col++) if (m.isDark(r, col)) g.fillRect((col + quiet) * px, (r + quiet) * px, px, px);
+  return c.toDataURL("image/png");
+}
+
 function showQr(box, p) {
   const link = SITE_URL + "?t=" + p.id;
-  const q = el("div");
-  box.replaceChildren(card(
+  let img;
+  try { img = el("img", { class: "qrimg", src: qrImage(link), alt: "QR কোড " + p.id }); }
+  catch { img = el("p", { class: "err" }, "QR তৈরি হয়নি।"); }
+  fill(box, card(
     el("h2", {}, (p.name || "") + " এর ট্যাগ QR"),
-    el("div", { class: "qrbox" }, q, el("span", { class: "id" }, p.id)),
+    el("div", { class: "qrbox" }, img, el("span", { class: "id" }, p.id)),
     el("p", { class: "muted", style: "overflow-wrap:anywhere" }, link),
-    el("p", { class: "muted" }, "ছবিটি লম্বা চেপে বা রাইট-ক্লিক করে সেভ করুন, তারপর ট্যাগ প্রিন্টে দিন।"),
+    el("p", { class: "muted" }, "ছবিটি লম্বা চেপে বা রাইট-ক্লিক করে সেভ করুন, তারপর ট্যাগ প্রিন্টে দিন। ট্যাগে QR অন্তত ২ সেমি চওড়া রাখুন।"),
     el("button", { class: "ghost small", style: "align-self:flex-start", onclick: () => box.replaceChildren() }, "বন্ধ করুন")));
-  try { new QRCode(q, { text: link, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M }); }
-  catch { q.textContent = "QR তৈরি হয়নি।"; }
 }
 
 // ---------- start ----------
