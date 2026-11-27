@@ -33,6 +33,8 @@ const clearSubs = () => { unsub.forEach(f => { try { f(); } catch {} }); unsub =
 // ---------- helpers ----------
 function el(tag, attrs = {}, ...kids) {
   const e = document.createElement(tag);
+  // Grammarly and similar extensions can swallow Bangla keyboard (IME) input in form fields; opt every field out.
+  if (tag === "input" || tag === "textarea") { e.setAttribute("data-gramm", "false"); e.setAttribute("data-gramm_editor", "false"); e.setAttribute("data-enable-grammarly", "false"); }
   for (const [k, v] of Object.entries(attrs)) {
     if (k === "class") e.className = v;
     else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
@@ -42,7 +44,9 @@ function el(tag, attrs = {}, ...kids) {
   return e;
 }
 const card = (...kids) => el("div", { class: "card" }, ...kids);
-const show = (...nodes) => app.replaceChildren(...nodes);
+// replaceChildren() would print a null child as the text "null", so drop empty slots first.
+const fill = (node, ...kids) => node.replaceChildren(...kids.flat().filter(k => k != null && k !== false));
+const show = (...nodes) => fill(app, ...nodes);
 const safeImg = s => (typeof s === "string" && s.startsWith("data:image/jpeg;base64,") ? s : null);
 const safeMap = s => (typeof s === "string" && /^https:\/\/maps\.google\.com\/\?q=-?[0-9.]+,-?[0-9.]+$/.test(s) ? s : null);
 function newId() { const a = new Uint32Array(6); crypto.getRandomValues(a); return "PT-" + [...a].map(n => ALPHA[n % ALPHA.length]).join(""); }
@@ -191,7 +195,7 @@ function ownerView() {
 
   unsub.push(onSnapshot(query(collection(db, "pets"), where("ownerUid", "==", uid)), s => {
     const list = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    petsBox.replaceChildren(el("h2", {}, "আমার পোষা প্রাণী (" + list.length.toLocaleString("bn-BD") + ")"),
+    fill(petsBox, el("h2", {}, "আমার পোষা প্রাণী (" + list.length.toLocaleString("bn-BD") + ")"),
       list.length ? null : el("p", { class: "muted" }, "এখনো কোনো ট্যাগ চালু করা হয়নি। উপরের বাটন চাপুন।"),
       ...list.map(p => {
         const im = safeImg(p.petPhoto);
@@ -202,14 +206,14 @@ function ownerView() {
               el("button", { class: "small ghost", onclick: () => showQr(editBox, p) }, "QR কোড"),
               el("a", { class: "small", href: "?t=" + p.id }, "পেজ দেখুন"))));
       }));
-  }, () => petsBox.replaceChildren(el("p", { class: "err" }, "তালিকা লোড হয়নি।"))));
+  }, () => fill(petsBox, el("p", { class: "err" }, "তালিকা লোড হয়নি।"))));
 
   unsub.push(onSnapshot(query(collection(db, "messages"), where("ownerUid", "==", uid)), s => {
     const msgs = s.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
     const unread = msgs.filter(m => !m.read).length;
     document.title = (unread ? `(${unread}) ` : "") + "পেটট্যাগ · মালিক";
-    inboxBox.replaceChildren(el("h2", {}, "ইনবক্স" + (unread ? " · " + unread.toLocaleString("bn-BD") + "টি নতুন" : "")),
+    fill(inboxBox, el("h2", {}, "ইনবক্স" + (unread ? " · " + unread.toLocaleString("bn-BD") + "টি নতুন" : "")),
       msgs.length ? null : el("p", { class: "muted" }, "কেউ ট্যাগ স্ক্যান করে মেসেজ দিলে এখানে দেখাবে।"),
       ...msgs.map(m => {
         const map = safeMap(m.mapUrl);
@@ -224,7 +228,7 @@ function ownerView() {
             m.read ? null : el("button", { class: "small ghost", onclick: e => { e.target.disabled = true; updateDoc(doc(db, "messages", m.id), { read: true }).catch(() => { e.target.disabled = false; }); } }, "পড়েছি"),
             el("button", { class: "small ghost", onclick: e => { e.target.disabled = true; deleteDoc(doc(db, "messages", m.id)).catch(() => { e.target.disabled = false; }); } }, "মুছুন")));
       }));
-  }, () => inboxBox.replaceChildren(el("p", { class: "err" }, "ইনবক্স লোড হয়নি।"))));
+  }, () => fill(inboxBox, el("p", { class: "err" }, "ইনবক্স লোড হয়নি।"))));
 }
 
 async function openEditor(box, id, p) {
@@ -289,17 +293,32 @@ async function openEditor(box, id, p) {
   box.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+// Draw the QR ourselves: whole-pixel modules (no blur), black on white, and a 4-module white quiet zone
+// baked into the image, so phone camera apps (not only Google Lens) detect it, on screen or printed.
+function qrImage(text, px = 12) {
+  const tmp = document.createElement("div");
+  const qr = new QRCode(tmp, { text, width: 64, height: 64, correctLevel: QRCode.CorrectLevel.M });
+  const m = qr._oQRCode, n = m.getModuleCount(), quiet = 4, size = (n + quiet * 2) * px;
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d");
+  g.fillStyle = "#ffffff"; g.fillRect(0, 0, size, size);
+  g.fillStyle = "#000000";
+  for (let r = 0; r < n; r++) for (let col = 0; col < n; col++) if (m.isDark(r, col)) g.fillRect((col + quiet) * px, (r + quiet) * px, px, px);
+  return c.toDataURL("image/png");
+}
+
 function showQr(box, p) {
   const link = SITE_URL + "?t=" + p.id;
-  const q = el("div");
-  box.replaceChildren(card(
+  let img;
+  try { img = el("img", { class: "qrimg", src: qrImage(link), alt: "QR কোড " + p.id }); }
+  catch { img = el("p", { class: "err" }, "QR তৈরি হয়নি।"); }
+  fill(box, card(
     el("h2", {}, (p.name || "") + " এর ট্যাগ QR"),
-    el("div", { class: "qrbox" }, q, el("span", { class: "id" }, p.id)),
+    el("div", { class: "qrbox" }, img, el("span", { class: "id" }, p.id)),
     el("p", { class: "muted", style: "overflow-wrap:anywhere" }, link),
-    el("p", { class: "muted" }, "ছবিটি লম্বা চেপে বা রাইট-ক্লিক করে সেভ করুন, তারপর ট্যাগ প্রিন্টে দিন।"),
+    el("p", { class: "muted" }, "ছবিটি লম্বা চেপে বা রাইট-ক্লিক করে সেভ করুন, তারপর ট্যাগ প্রিন্টে দিন। ট্যাগে QR অন্তত ২ সেমি চওড়া রাখুন।"),
     el("button", { class: "ghost small", style: "align-self:flex-start", onclick: () => box.replaceChildren() }, "বন্ধ করুন")));
-  try { new QRCode(q, { text: link, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M }); }
-  catch { q.textContent = "QR তৈরি হয়নি।"; }
 }
 
 // ---------- start ----------
