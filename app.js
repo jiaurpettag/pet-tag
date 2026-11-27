@@ -33,6 +33,8 @@ const clearSubs = () => { unsub.forEach(f => { try { f(); } catch {} }); unsub =
 // ---------- helpers ----------
 function el(tag, attrs = {}, ...kids) {
   const e = document.createElement(tag);
+  // Grammarly and similar extensions can swallow Bangla keyboard (IME) input in form fields; opt every field out.
+  if (tag === "input" || tag === "textarea") { e.setAttribute("data-gramm", "false"); e.setAttribute("data-gramm_editor", "false"); e.setAttribute("data-enable-grammarly", "false"); }
   for (const [k, v] of Object.entries(attrs)) {
     if (k === "class") e.className = v;
     else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
