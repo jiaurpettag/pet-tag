@@ -234,11 +234,13 @@ function ownerView() {
         const map = safeMap(m.mapUrl);
         return el("div", { class: "msg" + (m.read ? "" : " unread") },
           el("strong", {}, (m.petName || m.tagId) + " · " + (m.finderName || "নাম দেননি")),
+          m.via === "sms" ? el("span", { class: "muted" }, "ট্যাগের পেছনের QR থেকে SMS এসেছে। নিচের নম্বরে ফোন বা SMS করুন।") : null,
           el("span", { class: "muted" }, fmt(m.createdAt)),
           el("span", {}, m.message || ""),
           m.location ? el("span", {}, "জায়গা: " + m.location) : null,
           map ? el("a", { href: map, target: "_blank", rel: "noopener" }, "📍 ম্যাপে লোকেশন দেখুন") : null,
-          m.finderPhone ? el("span", {}, "ফোন: ", el("a", { href: "tel:" + m.finderPhone.replace(/[^0-9+]/g, "") }, m.finderPhone)) : null,
+          m.finderPhone ? el("span", {}, "ফোন: ", el("a", { href: "tel:" + m.finderPhone.replace(/[^0-9+]/g, "") }, m.finderPhone),
+            " · ", el("a", { href: "sms:" + m.finderPhone.replace(/[^0-9+]/g, "") }, "SMS")) : null,
           el("div", { class: "row" },
             m.read ? null : el("button", { class: "small ghost", onclick: e => { e.target.disabled = true; updateDoc(doc(db, "messages", m.id), { read: true }).catch(() => { e.target.disabled = false; }); } }, "পড়েছি"),
             el("button", { class: "small ghost", onclick: e => { e.target.disabled = true; deleteDoc(doc(db, "messages", m.id)).catch(() => { e.target.disabled = false; }); } }, "মুছুন")));
@@ -358,7 +360,8 @@ function showQr(box, p) {
     el("h2", {}, (p.name || "") + " এর ট্যাগ QR"),
     el("div", { class: "qrbox" }, img, el("span", { class: "id" }, p.id)),
     el("p", { class: "muted", style: "overflow-wrap:anywhere" }, link),
-    el("p", { class: "muted" }, "ছবিটি লম্বা চেপে বা রাইট-ক্লিক করে সেভ করুন, তারপর ট্যাগ প্রিন্টে দিন। ট্যাগে QR অন্তত ২ সেমি চওড়া রাখুন।"),
+    el("a", { href: "tag.html?t=" + p.id, target: "_blank", rel: "noopener" }, "🖨️ গোল ট্যাগের প্রিন্ট ডিজাইন (সামনে ওয়েব QR, পেছনে নেট ছাড়া SMS QR)"),
+    el("p", { class: "muted" }, "শুধু QR লাগলে ছবিটি লম্বা চেপে বা রাইট-ক্লিক করে সেভ করুন। ট্যাগে QR অন্তত ১.২ সেমি চওড়া রাখুন।"),
     el("button", { class: "ghost small", style: "align-self:flex-start", onclick: () => box.replaceChildren() }, "বন্ধ করুন")));
 }
 
