@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ট্যাগ প্রিন্ট · পেটট্যাগ</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@600;800&family=Hind+Siliguri:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+  .opts{display:grid;gap:10px}
+  .opts select,.opts input[type=number]{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .big{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+  .big figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .big svg{width:min(40vw,210px);height:auto;background:#fff;border-radius:50%;box-shadow:0 0 0 1px var(--line)}
+  .stats{font-size:.9rem;display:grid;gap:4px}
+  .stats .bad{color:var(--warn);font-weight:600}
+  .stats .good{color:var(--accent);font-weight:600}
+  /* The sheet: every tag at its real size in millimetres. Front and back sit side by side with the ID under them. */
+  .sheet{background:#fff;color:#000;display:flex;flex-wrap:wrap;gap:6mm 10mm;padding:6mm;border-radius:8px;overflow:auto}
+  .pair{display:flex;flex-direction:column;align-items:center;gap:1mm}
+  .pair .sides{display:flex;gap:3mm}
+  .pair .lbl{font:500 2.6mm/1 var(--mono);color:#555}
+  .sheet svg{display:block}
+  .nocut .cut{display:none}
+  @media print{
+    @page{size:A4;margin:10mm}
+    body{background:#fff}
+    .wrap{max-width:none;padding:0}
+    .noprint{display:none!important}
+    .sheet{padding:0;border-radius:0}
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="noprint"><a class="brand" href="./">পেটট্যাগ</a><span class="tagid">ট্যাগ প্রিন্ট</span></header>
+  <main id="app" class="noprint"></main>
+  <div id="sheet" class="sheet"></div>
+</div>
+<script type="module" src="tag.js"></script>
+</body>
+</html>
