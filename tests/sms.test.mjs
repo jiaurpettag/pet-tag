@@ -36,7 +36,7 @@ ok("no key set yet -> rejected", sms("x", { from: "+8801711111111", text: "PT-7K
 gs.setupSms();
 const key = props.get("SMS_KEY");
 ok("setupSms makes a key and logs the link", /^[0-9a-f]{32}$/.test(key) && logs[0].includes("/exec?key=" + key));
-ok("editor /dev URL is logged as /exec", !logs[0].includes("/dev"));
+ok("editor /dev URL is replaced by the live /exec URL", !logs[0].includes("/dev") && logs[0].includes("AKfycbzDvTQ") && logs[0].includes("/exec?key="));
 ok("wrong key rejected", sms("wrong", { from: "+8801711111111", text: "PT-7K3M9Q FOUND" }) === "bad key");
 ok("garbage body rejected", sms(key, "not json") === "bad request");
 ok("SMS without tag id ignored", sms(key, { from: "+8801711111111", text: "hello" }) === "no tag");

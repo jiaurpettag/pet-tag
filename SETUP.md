@@ -73,7 +73,7 @@ SMS টা যায় আপনার কোম্পানির সিমে
 **খ) Apps Script আপডেট করা** (যে অ্যাকাউন্ট দিয়ে "PetTag Alerts" বানিয়েছিলেন)
 1. https://script.google.com → **PetTag Alerts** খুলুন।
 2. `Code.gs` এর সব লেখা মুছে [apps-script/Code.gs](apps-script/Code.gs) এর নতুন লেখা পেস্ট করুন। 💾 **Save** চাপুন।
-3. উপরের ফাংশনের ড্রপডাউন থেকে `setupSms` বেছে **▶ Run** চাপুন। নিচে **Execution log** এ একটা লিংক আসবে: `https://script.google.com/macros/s/.../exec?key=...`। লিংকটা `/exec?key=` দিয়ে না হলে **Deploy → Manage deployments** থেকে Web app URL কপি করে শেষে `?key=...` জুড়ে দিন। এটা গোপন রাখুন, শুধু রিলে ফোনের অ্যাপে বসাবেন। কখনো কাউকে দেখিয়ে ফেললে (যেমন স্ক্রিনশটে) `newSmsKey` বেছে ▶ Run চাপুন, নতুন লিংক ফোনে বসান।
+3. উপরের ফাংশনের ড্রপডাউন থেকে `setupSms` বেছে **▶ Run** চাপুন। নিচে **Execution log** এ একটা লিংক আসবে: `https://script.google.com/macros/s/.../exec?key=...`। লিংকটা `/dev?key=` দিয়ে শেষ হলে ওটা ভুল লিংক: **Deploy → Manage deployments** থেকে Web app URL (`/exec`) কপি করে শেষে `?key=...` জুড়ে দিন। এটা গোপন রাখুন, শুধু রিলে ফোনের অ্যাপে বসাবেন। কখনো কাউকে দেখিয়ে ফেললে (যেমন স্ক্রিনশটে) `newSmsKey` বেছে ▶ Run চাপুন, নতুন লিংক ফোনে বসান।
 4. উপরে ডানে **Deploy** → **Manage deployments** → ✏️ (Edit) → **Version** এ **New version** → **Deploy** চাপুন। (লিংক একই থাকে।)
 
 **গ) অ্যাপে লিংক বসানো**

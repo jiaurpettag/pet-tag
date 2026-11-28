@@ -18,6 +18,8 @@ const SITE_URL = 'https://jiaurpettag.github.io/pet-tag/';
 const MAX_AGE_MS = 15 * 60 * 1000; // only alert for messages saved in the last 15 minutes
 const BASE = 'https://firestore.googleapis.com/v1/projects/' + PROJECT_ID + '/databases/(default)/documents/';
 
+// The live Web app URL (same as NOTIFY_URL in firebase-config.js). Editing a deployment to a new version keeps it.
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzDvTQMHIbhBFOL242jeQmMxM5l7VKN3biM1XD2hOmgdtj6xozRiH6AWpsqYh2efg-V/exec';
 const SMS_TAG_RE = /PT[-\s]?([2-9A-HJKMNP-Z]{6})/;
 const SMS_PER_HOUR = 5; // per sender number, so one phone cannot flood an owner
 
@@ -169,8 +171,9 @@ function setupSms() {
   const props = PropertiesService.getScriptProperties();
   let key = props.getProperty('SMS_KEY');
   if (!key) { key = Utilities.getUuid().replace(/-/g, ''); props.setProperty('SMS_KEY', key); }
-  // Run from the editor, getUrl() gives the test URL ending in /dev, which outsiders cannot open; the phone needs /exec.
-  const url = String(ScriptApp.getService().getUrl() || '').replace(/\/dev$/, '/exec');
+  // Run from the editor, getUrl() gives the owner-only test URL (/dev, with a different ID); the phone needs the live /exec URL.
+  const got = String(ScriptApp.getService().getUrl() || '');
+  const url = /\/exec$/.test(got) ? got : WEBAPP_URL;
   Logger.log('SMS phone link (paste into the app): ' + url + '?key=' + key);
   Logger.log('If this link does not end in /exec?key=..., use the Web app URL from Deploy > Manage deployments and add ?key=' + key);
 }
