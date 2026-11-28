@@ -169,5 +169,14 @@ function setupSms() {
   const props = PropertiesService.getScriptProperties();
   let key = props.getProperty('SMS_KEY');
   if (!key) { key = Utilities.getUuid().replace(/-/g, ''); props.setProperty('SMS_KEY', key); }
-  Logger.log('SMS phone link (paste into the app): ' + ScriptApp.getService().getUrl() + '?key=' + key);
+  // Run from the editor, getUrl() gives the test URL ending in /dev, which outsiders cannot open; the phone needs /exec.
+  const url = String(ScriptApp.getService().getUrl() || '').replace(/\/dev$/, '/exec');
+  Logger.log('SMS phone link (paste into the app): ' + url + '?key=' + key);
+  Logger.log('If this link does not end in /exec?key=..., use the Web app URL from Deploy > Manage deployments and add ?key=' + key);
+}
+
+/** Run this if the key was ever shown to anyone (e.g. in a screenshot). The old phone link stops working. */
+function newSmsKey() {
+  PropertiesService.getScriptProperties().deleteProperty('SMS_KEY');
+  setupSms();
 }

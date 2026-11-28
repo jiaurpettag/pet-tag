@@ -20,15 +20,15 @@ const UrlFetchApp = { fetch(url, o = {}) {
   const r = execFileSync("curl", [...args, url]).toString(); const i = r.lastIndexOf("\n");
   return { getResponseCode: () => Number(r.slice(i + 1)), getContentText: () => r.slice(0, i) };
 } };
-const ctx = { UrlFetchApp, MailApp: { sendEmail: m => sent.push(m) }, ScriptApp: { getOAuthToken: () => "owner", getService: () => ({ getUrl: () => "https://script.google.com/macros/s/X/exec" }) },
+const ctx = { UrlFetchApp, MailApp: { sendEmail: m => sent.push(m) }, ScriptApp: { getOAuthToken: () => "owner", getService: () => ({ getUrl: () => "https://script.google.com/macros/s/X/dev" }) },
   LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock() {} }) }, ContentService: { createTextOutput: s => s },
   Session: { getActiveUser: () => ({ getEmail: () => "me@x.com" }) }, Logger: { log: s => logs.push(s) },
-  PropertiesService: { getScriptProperties: () => ({ getProperty: k => props.get(k) ?? null, setProperty: (k, v) => props.set(k, v) }) },
+  PropertiesService: { getScriptProperties: () => ({ getProperty: k => props.get(k) ?? null, setProperty: (k, v) => props.set(k, v), deleteProperty: k => props.delete(k) }) },
   CacheService: { getScriptCache: () => ({ get: k => cache.get(k) ?? null, put: (k, v) => cache.set(k, v) }) },
   Utilities: { DigestAlgorithm: { SHA_256: "sha256" }, computeDigest: (a, s) => [...createHash(a).update(s).digest()], base64Encode: b => Buffer.from(b).toString("base64"), getUuid: () => randomUUID() } };
 const logs = [];
 const src = readFileSync(new URL("../apps-script/Code.gs", import.meta.url), "utf8");
-const gs = new Function(...Object.keys(ctx), src + "; return { doPost, setupSms };")(...Object.values(ctx));
+const gs = new Function(...Object.keys(ctx), src + "; return { doPost, setupSms, newSmsKey };")(...Object.values(ctx));
 const sms = (key, body) => gs.doPost({ parameter: { key }, postData: { contents: typeof body === "string" ? body : JSON.stringify(body) } });
 const inbox = async () => (await getDocs(query(collection(alice, "messages"), where("ownerUid", "==", "alice")))).docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.createdAt.toMillis() - b.createdAt.toMillis());
 
@@ -36,6 +36,7 @@ ok("no key set yet -> rejected", sms("x", { from: "+8801711111111", text: "PT-7K
 gs.setupSms();
 const key = props.get("SMS_KEY");
 ok("setupSms makes a key and logs the link", /^[0-9a-f]{32}$/.test(key) && logs[0].includes("/exec?key=" + key));
+ok("editor /dev URL is logged as /exec", !logs[0].includes("/dev"));
 ok("wrong key rejected", sms("wrong", { from: "+8801711111111", text: "PT-7K3M9Q FOUND" }) === "bad key");
 ok("garbage body rejected", sms(key, "not json") === "bad request");
 ok("SMS without tag id ignored", sms(key, { from: "+8801711111111", text: "hello" }) === "no tag");
@@ -55,5 +56,7 @@ msgs = await inbox();
 ok("owner can mark an SMS message read", await updateDoc(doc(alice, "messages/" + msgs[0].id), { read: true }).then(() => true, () => false));
 ok("web alert path still works with ?key absent", gs.doPost({ parameter: {}, postData: { contents: JSON.stringify({ id: "../x" }) } }) === "bad id");
 await setDoc(doc(alice, "owners/alice"), { notify: false }, { merge: true });
-ok("owner turned alerts off -> saved, no email", sms(key, { from: "01755555555", text: "PT-7K3M9Q FOUND", sentStamp: 5 }) === "saved");
+gs.newSmsKey();
+ok("newSmsKey replaces the key; old link stops working", props.get("SMS_KEY") !== key && sms(key, { from: "01766666666", text: "PT-7K3M9Q FOUND", sentStamp: 7 }) === "bad key");
+ok("owner turned alerts off -> saved, no email", sms(props.get("SMS_KEY"), { from: "01755555555", text: "PT-7K3M9Q FOUND", sentStamp: 5 }) === "saved");
 console.log(`\n${pass} passed, ${fail} failed`); await env.cleanup(); process.exit(fail ? 1 : 0);
