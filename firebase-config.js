@@ -17,7 +17,7 @@ export const NOTIFY_URL = "https://script.google.com/macros/s/AKfycbzDvTQMHIbhBF
 
 // Offline SMS QR (back of the tag): the company SIM number in the relay Android phone, with country code,
 // e.g. "+8801712345678". Empty = the back side is not printed yet. Never put a pet owner's number here.
-export const SMS_NUMBER = "";
+export const SMS_NUMBER = "+8801939377902";
 
 // Brand shown on the front ring: "Powered by <BRAND>".
-export const BRAND = "ZiaurIT";
+export const BRAND = "Jiaur IT";

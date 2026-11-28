@@ -5,7 +5,7 @@
 import * as cfg from "./firebase-config.js";
 
 const SITE_URL = cfg.SITE_URL;
-const BRAND = cfg.BRAND || "ZiaurIT";
+const BRAND = cfg.BRAND || "Jiaur IT";
 const ID_RE = /^PT-[2-9A-HJKMNP-Z]{6}$/;
 const ALPHA = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const TEXT = {
